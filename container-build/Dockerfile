@@ -1,26 +1,31 @@
-# Use the httpd-parent image as base
-FROM quay.io/redhattraining/httpd-parent
+FROM registry.access.redhat.com/ubi8/ubi:8.0
+
+MAINTAINER Red Hat Training <training@redhat.com>
 
 LABEL io.k8s.description=" A basic Apache server" \
 			io.k8s.display-name="Apache Htop" \
 			io.openshift.expose-service="8080:http" \
 			io.openshift.tags="Apache, httpd"
 
-RUN sed -i "s/Listen 80/Listen 8080/g" /etc/httpd/conf/httpd.conf && \
-		sed -i "s/#ServerName www.example.com:80/ServerName 0.0.0.0:8080/g" /etc/httpd/conf/httpd.conf 
+ENV DOCROOT=/var/www/html 
 
-COPY epel-release-latest-8.noarch.rpm ./
+RUN yum install -y --nodocs --disableplugin=subscription-manager httpd && \ 
+		yum clean all --disableplugin=subscription-manager -y && \
+		echo "Hello from the httpd-parent container!" > ${DOCROOT}/index.html && \
+		sed -i "s/Listen 80/Listen 8080/g" /etc/httpd/conf/httpd.conf && \
+    sed -i "s/#ServerName www.example.com:80/ServerName 0.0.0.0:8080/g" /etc/httpd/conf/httpd.conf && \
+		chgrp -R 0 /var/log/httpd /var/run/httpd && \
+    chmod -R g=u /var/log/httpd /var/run/httpd 
 
-RUN yum install -y epel-release-latest-8.noarch.rpm && \
-		yum update -y && \
-		yum install --nodocs --disableplugin=subscreption-manager htop -y && \
-		yum clean all -y
+COPY src ${DOCROOT}/
+ADD do288-apps.tar ./
 
-RUN chgrp -R 0 /var/log/httpd /var/run/httpd && \
-		chmod -R g=u /var/log/httpd /var/run/httpd
+ONBUILD COPY src/ ${DOCROOT}/
 
 EXPOSE 8080
 
 USER 1001
 
+# Launch httpd
 
+CMD /usr/sbin/httpd -DFOREGROUND

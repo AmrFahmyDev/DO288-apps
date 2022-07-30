@@ -1,0 +1,24 @@
+# Use the httpd-parent image as base
+FROM quay.io/redhattraining/httpd-parent
+
+LABEL io.k8s.description=" A basic Apache server" \
+			io.k8s.display-name="Apache Htop" \
+			io.openshift.expose-service="8080:http" \
+			io.openshift.tags="Apache, httpd"
+
+WORKDIR /app
+COPY nodejs-helloworld/ ./
+
+RUN sed -i "s/Listen 80/Listen 8080/g" /etc/httpd/conf/httpd.conf && \
+		sed -i "s/#ServerName www.example.com:80/ServerName 0.0.0.0:8080/g" /etc/httpd/conf/httpd.conf && \
+		yum update -y && \
+		yum install --nodocs --disableplugin=subscreption-manager -y nodejs && \
+		yum clean all -y && \
+		chgrp -R 0 /var/log/httpd /var/run/httpd /app && \
+		chmod -R g=u /var/log/httpd /var/run/httpd /app && \
+		npm install
+
+EXPOSE 8080 9000
+
+USER 1001
+
